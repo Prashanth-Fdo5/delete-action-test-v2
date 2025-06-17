@@ -1,0 +1,54 @@
+name: Delete Old Git Tags
+
+on:
+  workflow_dispatch:
+    inputs:
+      keep:
+        description: 'Number of latest tags to keep'
+        required: true
+        default: '10'
+
+jobs:
+  delete-old-tags:
+    runs-on: [self-hosted, on-premise]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch all tags
+        run: git fetch --tags
+
+      - name: Delete old tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KEEP_TAGS: ${{ github.event.inputs.keep }}
+        run: |
+          echo "Fetching and sorting all tags..."
+          TAGS=$(git for-each-ref --sort=-creatordate --format '%(refname:short)' refs/tags)
+
+          echo "Keeping the latest $KEEP_TAGS tags..."
+          COUNT=0
+          KEPT_TAGS=""
+          DELETE_TAGS=""
+
+          for TAG in $TAGS; do
+            COUNT=$((COUNT+1))
+            if [ $COUNT -le $KEEP_TAGS ]; then
+              KEPT_TAGS="$KEPT_TAGS $TAG"
+            else
+              DELETE_TAGS="$DELETE_TAGS $TAG"
+            fi
+          done
+
+          echo "Tags to keep: $KEPT_TAGS"
+          echo "Tags to delete: $DELETE_TAGS"
+
+          for OLD_TAG in $DELETE_TAGS; do
+            echo "Deleting tag: $OLD_TAG"
+
+            # Delete remote tag using GitHub API
+            curl -s -X DELETE \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              https://api.github.com/repos/${{ github.repository }}/git/refs/tags/$OLD_TAG
+          done
