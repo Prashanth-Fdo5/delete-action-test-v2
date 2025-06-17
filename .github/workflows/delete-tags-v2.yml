@@ -1,12 +1,9 @@
-name: Delete Old Git Tags
+name: Auto Delete Old Git Tags on New Tag Push
 
 on:
-  workflow_dispatch:
-    inputs:
-      keep:
-        description: 'Number of latest tags to keep'
-        required: true
-        default: '10'
+  push:
+    tags:
+      - '*'
 
 jobs:
   delete-old-tags:
@@ -22,11 +19,11 @@ jobs:
       - name: Fetch all tags
         run: git fetch --tags
 
-      - name: Delete old tags
+      - name: Delete old tags (keep only latest 10)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          KEEP_TAGS: ${{ github.event.inputs.keep }}
         run: |
+          KEEP_TAGS=10
           echo "Listing all tags..."
           TAGS=$(git for-each-ref --sort=-creatordate --format '%(refname:short)' refs/tags)
           
