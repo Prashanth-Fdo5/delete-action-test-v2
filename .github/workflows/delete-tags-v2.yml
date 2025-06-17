@@ -12,8 +12,11 @@ jobs:
   delete-old-tags:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write  
+
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Fetch all tags
@@ -24,31 +27,29 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KEEP_TAGS: ${{ github.event.inputs.keep }}
         run: |
-          echo "Fetching and sorting all tags..."
+          echo "Listing all tags..."
           TAGS=$(git for-each-ref --sort=-creatordate --format '%(refname:short)' refs/tags)
-
+          
           echo "Keeping the latest $KEEP_TAGS tags..."
           COUNT=0
-          KEPT_TAGS=""
-          DELETE_TAGS=""
 
           for TAG in $TAGS; do
-            COUNT=$((COUNT+1))
+            COUNT=$((COUNT + 1))
             if [ $COUNT -le $KEEP_TAGS ]; then
-              KEPT_TAGS="$KEPT_TAGS $TAG"
-            else
-              DELETE_TAGS="$DELETE_TAGS $TAG"
+              echo "Keeping tag: $TAG"
+              continue
             fi
-          done
 
-          echo "Tags to keep: $KEPT_TAGS"
-          echo "Tags to delete: $DELETE_TAGS"
+            echo "Deleting tag: $TAG"
 
-          for OLD_TAG in $DELETE_TAGS; do
-            echo "Deleting tag: $OLD_TAG"
-
-            # Delete remote tag using GitHub API
-            curl -s -X DELETE \
+            # Make the DELETE API call
+            RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE \
               -H "Authorization: token $GITHUB_TOKEN" \
-              https://api.github.com/repos/${{ github.repository }}/git/refs/tags/$OLD_TAG
+              https://api.github.com/repos/${{ github.repository }}/git/refs/tags/$TAG)
+
+            if [[ "$RESPONSE" == "204" ]]; then
+              echo "✅ Successfully deleted tag $TAG"
+            else
+              echo "❌ Failed to delete tag $TAG (HTTP $RESPONSE)"
+            fi
           done
