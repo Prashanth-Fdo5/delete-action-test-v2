@@ -3,43 +3,44 @@ name: Auto Delete Old Git Tags on New Tag Push
 on:
   push:
     tags:
-      - '*'
+      - '*' 
 
 jobs:
   delete-old-tags:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write  
+      contents: write 
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Fetch all tags
-        run: git fetch --tags
+      - name: Clean local tags and fetch remote
+        run: |
+          git tag -l | xargs -r git tag -d || true
+          git fetch --tags --force
 
       - name: Delete old tags (keep only latest 10)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           KEEP_TAGS=10
-          echo "Listing all tags..."
-          TAGS=$(git for-each-ref --sort=-creatordate --format '%(refname:short)' refs/tags)
-          
-          echo "Keeping the latest $KEEP_TAGS tags..."
-          COUNT=0
 
+          echo "Listing all remote tags..."
+          TAGS=$(git for-each-ref --sort=-creatordate --format '%(refname:short)' refs/tags)
+
+          COUNT=0
           for TAG in $TAGS; do
             COUNT=$((COUNT + 1))
             if [ $COUNT -le $KEEP_TAGS ]; then
-              echo "Keeping tag: $TAG"
+              echo "✅ Keeping tag: $TAG"
               continue
             fi
 
-            echo "Deleting tag: $TAG"
+            echo "🗑 Deleting old tag: $TAG"
 
-            # Make the DELETE API call
+            # Call GitHub API to delete the tag
             RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE \
               -H "Authorization: token $GITHUB_TOKEN" \
               https://api.github.com/repos/${{ github.repository }}/git/refs/tags/$TAG)
@@ -50,3 +51,4 @@ jobs:
               echo "❌ Failed to delete tag $TAG (HTTP $RESPONSE)"
             fi
           done
+
