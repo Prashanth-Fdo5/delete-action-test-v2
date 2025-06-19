@@ -3,12 +3,12 @@ name: Trigger Build (staging) and Deploy (staging) Backend Services
 on:
   push:
     tags:
-      - '*'  
+      - '*' 
 
 jobs:
   trigger-deployment:
     if: startsWith(github.ref, 'refs/tags/')
-    runs-on: [self-hosted, on-premise]  
+    runs-on: [self-hosted, on-premise]
 
     steps:
       - name: Extract tag info
@@ -19,15 +19,18 @@ jobs:
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
           echo "PREFIX=$PREFIX" >> $GITHUB_ENV
 
-      - name: Print event type and payload
+      - name: Print client payload
         run: |
-          echo "Dispatching event type: build-and-deploy-staging-${{ env.PREFIX }}"
-          echo "Payload: {\"tag\": \"${{ env.TAG_NAME }}\", \"ref\": \"${{ github.ref }}\", \"commit\": \"${{ github.sha }}\"}"
+          echo 'Dispatching with payload:'
+          echo "Prefix: ${{ env.PREFIX }}"
+          echo "Tag: ${{ env.TAG_NAME }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "Commit: ${{ github.sha }}"
 
-      - name: Dispatch repository event based on tag prefix
+      - name: Dispatch repository event based on prefix
         uses: peter-evans/repository-dispatch@v2
         with:
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }} 
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           repository: Traders-Room/Deployment-Workflows
           event-type: build-and-deploy-staging-${{ env.PREFIX }}
           client-payload: >-
@@ -36,3 +39,4 @@ jobs:
               "ref": "${{ github.ref }}",
               "commit": "${{ github.sha }}"
             }
+              
