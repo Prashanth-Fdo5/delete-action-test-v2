@@ -32,7 +32,7 @@ jobs:
         with:
           token: ${{ secrets.PERSONAL }}
           repository: Prashanth-Fdo5/delete-action-test
-          event-type: build-and-deploy-staging-${{ env.PREFIX }}
+          event-type: build-and-deploy-staging
           client-payload: >-
             {
               "tag": "${{ env.TAG_NAME }}",
