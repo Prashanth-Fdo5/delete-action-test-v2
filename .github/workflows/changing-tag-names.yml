@@ -3,22 +3,34 @@ name: Trigger Build (staging) and Deploy (staging) Backend Services
 on:
   push:
     tags:
-      - '*' 
+      - '*'
 
 jobs:
   trigger-deployment:
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Extract tag info
         run: |
           TAG_FULL=${GITHUB_REF#refs/tags/}
-          PREFIX=$(echo "$TAG_FULL" | cut -d'/' -f1)
-          TAG_NAME=$(echo "$TAG_FULL" | cut -d'/' -f2)
+          echo "Full tag: $TAG_FULL"
+          
+          # Handle tags with or without prefix
+          if [[ "$TAG_FULL" == *"/"* ]]; then
+            PREFIX=$(echo "$TAG_FULL" | cut -d'/' -f1)
+            TAG_NAME=$(echo "$TAG_FULL" | cut -d'/' -f2)
+          else
+            PREFIX=""
+            TAG_NAME="$TAG_FULL"
+          fi
+          
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
           echo "PREFIX=$PREFIX" >> $GITHUB_ENV
-
+          
+          echo "Extracted PREFIX: $PREFIX"
+          echo "Extracted TAG_NAME: $TAG_NAME"
+          
       - name: Print client payload
         run: |
           echo 'Dispatching with payload:'
@@ -26,16 +38,20 @@ jobs:
           echo "Tag: ${{ env.TAG_NAME }}"
           echo "Ref: ${{ github.ref }}"
           echo "Commit: ${{ github.sha }}"
-
+          echo "Repository: ${{ github.repository }}"
+          
       - name: Dispatch repository event based on prefix
-        uses: peter-evans/repository-dispatch@v2
+        uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.TAGRELEASE }}
           repository: Prashanth-Fdo5/delete-action-test
           event-type: build-and-deploy-staging
-          client-payload: >-
+          client-payload: |
             {
               "tag": "${{ env.TAG_NAME }}",
+              "prefix": "${{ env.PREFIX }}",
               "ref": "${{ github.ref }}",
-              "commit": "${{ github.sha }}"
+              "commit": "${{ github.sha }}",
+              "repository": "${{ github.repository }}"
             }
+              
