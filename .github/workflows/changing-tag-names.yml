@@ -30,13 +30,13 @@ jobs:
       - name: Dispatch repository event based on prefix
         uses: peter-evans/repository-dispatch@v2
         with:
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          token: ${{ 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 }}
           repository: Prashanth-Fdo5/delete-action-test
-          event-type: build-and-deploy-staging-${{ env.PREFIX }}
+          event-type: build-and-deploy-staging-client
           client-payload: >-
             {
               "tag": "${{ env.TAG_NAME }}",
               "ref": "${{ github.ref }}",
               "commit": "${{ github.sha }}"
             }
-              
+
