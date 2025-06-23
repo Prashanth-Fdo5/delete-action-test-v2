@@ -3,8 +3,8 @@ name: Trigger HRM/CRM Build and Deploy (Staging)
 on:
   push:
     tags:
-      - 'hrm/v*'
-      - 'crm/v*'  
+      - 'hrm/*'
+      - 'crm/*'  
 
 jobs:
   trigger-deployment:
@@ -20,12 +20,6 @@ jobs:
 
           echo "PREFIX=$PREFIX" >> $GITHUB_ENV
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
-
-      - name: Validate prefix (must be hrm or crm)
-        if: ${{ env.PREFIX != 'hrm' && env.PREFIX != 'crm' }}
-        run: |
-          echo "❌ Unsupported tag prefix: '${{ env.PREFIX }}'"
-          exit 1
 
       - name: Print dispatch details
         run: |
