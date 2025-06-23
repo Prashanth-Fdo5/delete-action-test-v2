@@ -3,7 +3,7 @@ name: Trigger Build (staging) and Deploy (staging) Backend Services
 on:
   push:
     tags:
-      - '*' 
+      - '*'  # Listen to all tags but filter in the job
 
 jobs:
   trigger-deployment:
@@ -11,20 +11,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Extract tag info
+      - name: Extract tag prefix and version
+        id: extract
         run: |
           TAG_FULL=${GITHUB_REF#refs/tags/}
           PREFIX=$(echo "$TAG_FULL" | cut -d'/' -f1)
           TAG_NAME=$(echo "$TAG_FULL" | cut -d'/' -f2)
-          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+
           echo "PREFIX=$PREFIX" >> $GITHUB_ENV
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+          echo "TAG_FULL=$TAG_FULL" >> $GITHUB_ENV
+
+      - name: Stop if prefix is not hrm or crm
+        if: ${{ env.PREFIX != 'hrm' && env.PREFIX != 'crm' }}
+        run: |
+          echo "❌ Tag prefix '${{ env.PREFIX }}' is not supported. Allowed: hrm, crm."
+          exit 1
 
       - name: Print client payload
         run: |
-          echo 'Dispatching with payload:'
+          echo "Dispatching event for:"
           echo "Prefix: ${{ env.PREFIX }}"
-          echo "Tag: ${{ env.TAG_NAME }}"
-          echo "Ref: ${{ github.ref }}"
+          echo "Tag:    ${{ env.TAG_NAME }}"
+          echo "Ref:    ${{ github.ref }}"
           echo "Commit: ${{ github.sha }}"
 
       - name: Dispatch repository event based on prefix
@@ -32,11 +41,11 @@ jobs:
         with:
           token: ${{ secrets.SECRETS_TAG_TRIGGER }}
           repository: Prashanth-Fdo5/delete-action-test
-          event-type: build-and-deploy-staging-client
+          event-type: build-and-deploy-staging-${{ env.PREFIX }}
           client-payload: >-
             {
               "tag": "${{ env.TAG_NAME }}",
               "ref": "${{ github.ref }}",
               "commit": "${{ github.sha }}"
             }
-
+            
