@@ -3,7 +3,7 @@ name: Trigger Build (staging) and Deploy (staging) Backend Services
 on:
   push:
     tags:
-      - '*'  # Listen to all tags but filter in the job
+      - '*' 
 
 jobs:
   trigger-deployment:
@@ -41,7 +41,7 @@ jobs:
         with:
           token: ${{ secrets.SECRETS_TAG_TRIGGER }}
           repository: Prashanth-Fdo5/delete-action-test
-          event-type: build-and-deploy-staging-${{ env.PREFIX }}
+          event-type: build-and-deploy-staging${{ env.PREFIX }}
           client-payload: >-
             {
               "tag": "${{ env.TAG_NAME }}",
