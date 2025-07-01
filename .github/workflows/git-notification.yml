@@ -10,7 +10,7 @@ on:
 
 jobs:
   notify-and-deploy:
-    runs-on: [self-hosted, on-premise]
+    runs-on: ubuntu-latest
     continue-on-error: false
 
     steps:
