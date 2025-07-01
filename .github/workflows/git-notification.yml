@@ -95,10 +95,7 @@ jobs:
           curl -X POST "$CLIQ_WEBHOOK_URL" -H "Content-Type: application/json" -d @payload.json
           rm payload.json
 
-      - name: Example Deploy Step
-        run: |
-            echo "job status is: ${{ job.status }}"
-
+     
           
       - name: Notify Final Deployment Status
         if: always()
