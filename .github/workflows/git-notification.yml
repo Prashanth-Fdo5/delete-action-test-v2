@@ -97,9 +97,9 @@ jobs:
 
       - name: Example Deploy Step
         run: |
-          echo "✅ Deploying to your servers..."
-          
+            echo "job status is: ${{ job.status }}"
 
+          
       - name: Notify Final Deployment Status
         if: always()
         env:
