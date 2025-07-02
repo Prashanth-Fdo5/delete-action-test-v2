@@ -62,7 +62,7 @@ jobs:
       - name: Notify Production Deployment
         if: github.event_name == 'release' && github.event.action == 'published'
         env:
-         CLIQ_WEBHOOK_URL: 
+         CLIQ_WEBHOOK_URL: https://cliq.zoho.com/company/779974041/api/v2/channelsbyname/testingchannel/message?zapikey=1001.2b828b4afe6ae4aa449846b35439e65f.cc8102b654e1beb905a79042add90969
         run: |
           cat <<EOF > payload.json
           {
