@@ -95,20 +95,19 @@ jobs:
           curl -X POST "$CLIQ_WEBHOOK_URL" -H "Content-Type: application/json" -d @payload.json
           rm payload.json
 
+
      
-          
       - name: Notify Final Deployment Status
         if: always()
         env:
-          CLIQ_WEBHOOK_URL:  https://cliq.zoho.com/company/779974041/api/v2/channelsbyname/testingchannel/message?zapikey=1001.2b828b4afe6ae4aa449846b35439e65f.cc8102b654e1beb905a79042add90969
+          CLIQ_WEBHOOK_URL: https://cliq.zoho.com/company/779974041/api/v2/channelsbyname/testingchannel/message?zapikey=1001.2b828b4afe6ae4aa449846b35439e65f.cc8102b654e1beb905a79042add90969
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Get the PR that merged this commit (if any)
           PR_INFO=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" \
             -H "Accept: application/vnd.github.groot-preview+json")
 
-          MERGED_BY=$(echo "$PR_INFO" | jq -r '.[0].merged_by.login // "N/A"')
+          MERGED_BY=$(echo "$PR_INFO" | jq -r 'if length > 0 then .[0].merged_by.login // "N/A" else "N/A" end')
 
           if [ "${{ job.status }}" == "success" ]; then
             STATUS="✅ Deployment completed successfully"
@@ -147,4 +146,4 @@ jobs:
 
           curl -X POST "$CLIQ_WEBHOOK_URL" -H "Content-Type: application/json" -d @payload.json
           rm payload.json
-          
+
