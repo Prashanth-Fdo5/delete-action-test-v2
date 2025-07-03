@@ -3,8 +3,8 @@ name: Trigger HRM/CRM Build and Deploy (Staging)
 on:
   push:
     tags:
-      - 'hrm/*'
-      - 'crm/*'  
+      - 'hrm*'
+      - 'crm*'  
 
 jobs:
   trigger-deployment:
