@@ -3,7 +3,8 @@ name: Trigger HRM/CRM Build and Deploy (Staging)
 on:
   push:
     tags:
-      - '*'  
+       - 'crm-*'
+       - 'hrm-*' 
 
 jobs:
   trigger-deployment:
@@ -14,8 +15,8 @@ jobs:
       - name: Extract tag components
         run: |
           TAG_FULL=${GITHUB_REF#refs/tags/}
-          PREFIX=$(echo "$TAG_FULL" | cut -d'/' -f1)
-          TAG_NAME=$(echo "$TAG_FULL" | cut -d'/' -f2)
+          PREFIX=$(echo "$TAG_FULL" | cut -d'-' -f1)
+          TAG_NAME=$TAG_FULL
 
           echo "PREFIX=$PREFIX" >> $GITHUB_ENV
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
