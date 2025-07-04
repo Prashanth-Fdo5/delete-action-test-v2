@@ -31,7 +31,7 @@ jobs:
       - name: Dispatch to deployment repository
         uses: peter-evans/repository-dispatch@v2
         with:
-          token: ${{ PERSONAL_ACCESS_TOKEN }}
+          token: ${{ secrets.SECRETS_TAG_TRIGGER }}
           repository: Prashanth-Fdo5/delete-action-test
           event-type: build-and-deploy-staging-${{ env.PREFIX }}
           client-payload: >-
