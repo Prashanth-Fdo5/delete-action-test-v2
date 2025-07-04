@@ -95,6 +95,52 @@ jobs:
           curl -X POST "$CLIQ_WEBHOOK_URL" -H "Content-Type: application/json" -d @payload.json
           rm payload.json
 
+      - name: Wait for downstream dispatch workflow
+        id: wait-downstream
+        run: |
+          echo "🔄 Waiting for downstream workflow to finish..."
+
+          TARGET_REPO="Prashanth-Fdo5/delete-action-test"
+          TARGET_WORKFLOW_NAME="deploy-staging.yml"  # adjust as needed
+          GITHUB_API="https://api.github.com"
+
+          ATTEMPTS=0
+          MAX_ATTEMPTS=30
+          SLEEP=20
+
+          while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
+            # Get latest workflow runs in the target repo
+            RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.SECRETS_TAG_TRIGGER }}" \
+              "$GITHUB_API/repos/$TARGET_REPO/actions/workflows/$TARGET_WORKFLOW_NAME/runs?per_page=1")
+
+            STATUS=$(echo "$RESPONSE" | jq -r '.workflow_runs[0].status')
+            CONCLUSION=$(echo "$RESPONSE" | jq -r '.workflow_runs[0].conclusion')
+            HEAD_SHA=$(echo "$RESPONSE" | jq -r '.workflow_runs[0].head_sha')
+
+            echo "Downstream status=$STATUS, conclusion=$CONCLUSION, sha=$HEAD_SHA"
+
+            # match the same commit
+            if [ "$HEAD_SHA" != "${GITHUB_SHA}" ]; then
+              echo "Downstream workflow has different SHA, waiting..."
+              sleep $SLEEP
+              ATTEMPTS=$((ATTEMPTS+1))
+              continue
+            fi
+
+            if [ "$STATUS" == "completed" ]; then
+              echo "Downstream workflow finished with: $CONCLUSION"
+              echo "conclusion=$CONCLUSION" >> $GITHUB_OUTPUT
+              break
+            fi
+
+            sleep $SLEEP
+            ATTEMPTS=$((ATTEMPTS+1))
+          done
+
+          if [ $ATTEMPTS -ge $MAX_ATTEMPTS ]; then
+            echo "Downstream workflow timed out."
+            echo "conclusion=timed_out" >> $GITHUB_OUTPUT
+          fi
 
      
       - name: Notify Final Deployment Status
