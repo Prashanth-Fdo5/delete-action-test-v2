@@ -55,6 +55,54 @@ jobs:
               }
             ]
           }
+             cat <<EOF > payload.json
+          {
+            "text": "🚀 Staging Release Notification",
+            "bot": {
+              "name": "Release Bot",
+              "image": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+            },
+            "card": {
+              "title": "New Staging Tag Release for HRM",
+              "theme": "modern-inline"
+            },
+            "slides": [
+              {
+                "type": "label",
+                "title": "Release Details",
+                "data": [
+                  { "Tag": "${TAG_NAME}" },
+                  { "Author": "${DEPLOYED_BY}" },
+                  { "Repository": "${GITHUB_REPOSITORY}" },
+                  { "View on GitHub": "[🔗 View Tag](https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG_NAME})" }
+                ]
+              }
+            ]
+          }
+             cat <<EOF > payload.json
+          {
+            "text": "🚀 Staging Release Notification",
+            "bot": {
+              "name": "Release Bot",
+              "image": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+            },
+            "card": {
+              "title": "New Staging Tag Release for Review site",
+              "theme": "modern-inline"
+            },
+            "slides": [
+              {
+                "type": "label",
+                "title": "Release Details",
+                "data": [
+                  { "Tag": "${TAG_NAME}" },
+                  { "Author": "${DEPLOYED_BY}" },
+                  { "Repository": "${GITHUB_REPOSITORY}" },
+                  { "View on GitHub": "[🔗 View Tag](https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG_NAME})" }
+                ]
+              }
+            ]
+          }
           EOF
           curl -X POST "$CLIQ_WEBHOOK_URL" -H "Content-Type: application/json" -d @payload.json
           rm payload.json
