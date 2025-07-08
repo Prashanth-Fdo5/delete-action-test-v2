@@ -28,9 +28,30 @@ jobs:
       - name: Notify Staging Tag Push
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
         env:
-          CLIQ_WEBHOOK_URL: https://cliq.zoho.com/company/779974041/api/v2/channelsbyname/testingchannel/message?zapikey=1001.2b828b4afe6ae4aa449846b35439e65f.cc8102b654e1beb905a79042add90969
-
+          CLIQ_WEBHOOK_URL: https://cliq.zoho.com/company/779974041/api/v2/channelsbyname/testingchannel/message?zapikey=your_cliq_api_key
         run: |
+          TAG_NAME="${GITHUB_REF##*/}"
+          PREFIX=$(echo "$TAG_NAME" | cut -d'-' -f1)
+
+          echo "TAG_NAME=$TAG_NAME"
+          echo "PREFIX=$PREFIX"
+
+          case "$PREFIX" in
+            crm)
+              TITLE="New Staging Tag Release for CRM"
+              ;;
+            hrm)
+              TITLE="New Staging Tag Release for HRM"
+              ;;
+            review)
+              TITLE="New Staging Tag Release for Review site"
+              ;;
+            *)
+              echo "Unknown prefix '$PREFIX', skipping notification."
+              exit 0
+              ;;
+          esac
+
           cat <<EOF > payload.json
           {
             "text": "🚀 Staging Release Notification",
@@ -39,7 +60,7 @@ jobs:
               "image": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
             },
             "card": {
-              "title": "New Staging Tag Release for CRM",
+              "title": "$TITLE",
               "theme": "modern-inline"
             },
             "slides": [
@@ -47,65 +68,21 @@ jobs:
                 "type": "label",
                 "title": "Release Details",
                 "data": [
-                  { "Tag": "${TAG_NAME}" },
-                  { "Author": "${DEPLOYED_BY}" },
-                  { "Repository": "${GITHUB_REPOSITORY}" },
-                  { "View on GitHub": "[🔗 View Tag](https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG_NAME})" }
-                ]
-              }
-            ]
-          }
-             cat <<EOF > payload.json
-          {
-            "text": "🚀 Staging Release Notification",
-            "bot": {
-              "name": "Release Bot",
-              "image": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
-            },
-            "card": {
-              "title": "New Staging Tag Release for HRM",
-              "theme": "modern-inline"
-            },
-            "slides": [
-              {
-                "type": "label",
-                "title": "Release Details",
-                "data": [
-                  { "Tag": "${TAG_NAME}" },
-                  { "Author": "${DEPLOYED_BY}" },
-                  { "Repository": "${GITHUB_REPOSITORY}" },
-                  { "View on GitHub": "[🔗 View Tag](https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG_NAME})" }
-                ]
-              }
-            ]
-          }
-             cat <<EOF > payload.json
-          {
-            "text": "🚀 Staging Release Notification",
-            "bot": {
-              "name": "Release Bot",
-              "image": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
-            },
-            "card": {
-              "title": "New Staging Tag Release for Review site",
-              "theme": "modern-inline"
-            },
-            "slides": [
-              {
-                "type": "label",
-                "title": "Release Details",
-                "data": [
-                  { "Tag": "${TAG_NAME}" },
-                  { "Author": "${DEPLOYED_BY}" },
-                  { "Repository": "${GITHUB_REPOSITORY}" },
-                  { "View on GitHub": "[🔗 View Tag](https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG_NAME})" }
+                  { "Tag": "$TAG_NAME" },
+                  { "Author": "${{ github.actor }}" },
+                  { "Repository": "${{ github.repository }}" },
+                  { "View on GitHub": "[🔗 View Tag](https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME)" }
                 ]
               }
             ]
           }
           EOF
+
           curl -X POST "$CLIQ_WEBHOOK_URL" -H "Content-Type: application/json" -d @payload.json
           rm payload.json
+
+
+
 
       - name: Notify Production Deployment
         if: github.event_name == 'release' && github.event.action == 'published'
