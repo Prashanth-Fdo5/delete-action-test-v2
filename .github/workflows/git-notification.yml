@@ -39,7 +39,7 @@ jobs:
               "image": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
             },
             "card": {
-              "title": "New Tag Release",
+              "title": "New Staging Tag Release for CRM",
               "theme": "modern-inline"
             },
             "slides": [
