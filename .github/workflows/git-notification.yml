@@ -17,24 +17,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Extract common environment info
+      - name: Extract environment info
         run: |
           echo "TAG_NAME=${GITHUB_REF##*/}" >> $GITHUB_ENV
           echo "DEPLOYED_BY=${{ github.actor }}" >> $GITHUB_ENV
-          echo "BRANCH_NAME=${GITHUB_REF##*/}" >> $GITHUB_ENV
           echo "WORKFLOW_RUN_ID=${{ github.run_id }}" >> $GITHUB_ENV
           echo "DEPLOYMENT_TIME=$(date '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_ENV
 
       - name: Notify Staging Tag Push
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
         env:
           CLIQ_WEBHOOK_URL: https://cliq.zoho.com/company/779974041/api/v2/channelsbyname/testingchannel/message?zapikey=your_cliq_api_key
         run: |
           TAG_NAME="${GITHUB_REF##*/}"
           PREFIX=$(echo "$TAG_NAME" | cut -d'-' -f1)
-
-          echo "TAG_NAME=$TAG_NAME"
-          echo "PREFIX=$PREFIX"
 
           case "$PREFIX" in
             crm)
@@ -54,7 +50,7 @@ jobs:
 
           cat <<EOF > payload.json
           {
-            "text": "🚀 Staging Release Notification",
+            "text": "🚀 $TITLE",
             "bot": {
               "name": "Release Bot",
               "image": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
@@ -77,17 +73,13 @@ jobs:
             ]
           }
           EOF
-
-          curl -X POST "$CLIQ_WEBHOOK_URL" -H "Content-Type: application/json" -d @payload.json
+          curl -s -X POST "$CLIQ_WEBHOOK_URL" -H "Content-Type: application/json" -d @payload.json
           rm payload.json
 
-
-
-
       - name: Notify Production Deployment
-        if: github.event_name == 'release' && github.event.action == 'published'
+        if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
         env:
-         CLIQ_WEBHOOK_URL: https://cliq.zoho.com/company/779974041/api/v2/channelsbyname/testingchannel/message?zapikey=1001.2b828b4afe6ae4aa449846b35439e65f.cc8102b654e1beb905a79042add90969
+          CLIQ_WEBHOOK_URL: https://cliq.zoho.com/company/779974041/api/v2/channelsbyname/testingchannel/message?zapikey=your_cliq_api_key
         run: |
           cat <<EOF > payload.json
           {
@@ -97,13 +89,13 @@ jobs:
               "image": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
             },
             "card": {
-              "title": "New Production Deployment Release",
+              "title": "Production Deployment",
               "theme": "modern-inline"
             },
             "slides": [
               {
                 "type": "label",
-                "title": "Deployment Details",
+                "title": "Details",
                 "data": [
                   { "Environment": "🔴 Production" },
                   { "Release": "${{ github.event.release.tag_name }}" },
@@ -117,61 +109,13 @@ jobs:
             ]
           }
           EOF
-          curl -X POST "$CLIQ_WEBHOOK_URL" -H "Content-Type: application/json" -d @payload.json
+          curl -s -X POST "$CLIQ_WEBHOOK_URL" -H "Content-Type: application/json" -d @payload.json
           rm payload.json
 
-      - name: Wait for downstream dispatch workflow
-        id: wait-downstream
-        run: |
-          echo "🔄 Waiting for downstream workflow to finish..."
-
-          TARGET_REPO="Prashanth-Fdo5/delete-action-test"
-          TARGET_WORKFLOW_NAME="deploy-staging.yml"  # adjust as needed
-          GITHUB_API="https://api.github.com"
-
-          ATTEMPTS=0
-          MAX_ATTEMPTS=30
-          SLEEP=20
-
-          while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
-            # Get latest workflow runs in the target repo
-            RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.SECRETS_TAG_TRIGGER }}" \
-              "$GITHUB_API/repos/$TARGET_REPO/actions/workflows/$TARGET_WORKFLOW_NAME/runs?per_page=1")
-
-            STATUS=$(echo "$RESPONSE" | jq -r '.workflow_runs[0].status')
-            CONCLUSION=$(echo "$RESPONSE" | jq -r '.workflow_runs[0].conclusion')
-            HEAD_SHA=$(echo "$RESPONSE" | jq -r '.workflow_runs[0].head_sha')
-
-            echo "Downstream status=$STATUS, conclusion=$CONCLUSION, sha=$HEAD_SHA"
-
-            # match the same commit
-            if [ "$HEAD_SHA" != "${GITHUB_SHA}" ]; then
-              echo "Downstream workflow has different SHA, waiting..."
-              sleep $SLEEP
-              ATTEMPTS=$((ATTEMPTS+1))
-              continue
-            fi
-
-            if [ "$STATUS" == "completed" ]; then
-              echo "Downstream workflow finished with: $CONCLUSION"
-              echo "conclusion=$CONCLUSION" >> $GITHUB_OUTPUT
-              break
-            fi
-
-            sleep $SLEEP
-            ATTEMPTS=$((ATTEMPTS+1))
-          done
-
-          if [ $ATTEMPTS -ge $MAX_ATTEMPTS ]; then
-            echo "Downstream workflow timed out."
-            echo "conclusion=timed_out" >> $GITHUB_OUTPUT
-          fi
-
-     
       - name: Notify Final Deployment Status
         if: always()
         env:
-          CLIQ_WEBHOOK_URL: https://cliq.zoho.com/company/779974041/api/v2/channelsbyname/testingchannel/message?zapikey=1001.2b828b4afe6ae4aa449846b35439e65f.cc8102b654e1beb905a79042add90969
+          CLIQ_WEBHOOK_URL: https://cliq.zoho.com/company/779974041/api/v2/channelsbyname/testingchannel/message?zapikey=your_cliq_api_key
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Looking up PR that merged this commit..."
@@ -179,16 +123,11 @@ jobs:
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" \
             -H "Accept: application/vnd.github.groot-preview+json")
 
-          echo "PR_INFO=$PR_INFO"
-
-          # Defensive jq to check array type
           if echo "$PR_INFO" | jq -e 'type == "array"' >/dev/null; then
             MERGED_BY=$(echo "$PR_INFO" | jq -r '.[0].merged_by.login // "N/A"')
           else
             MERGED_BY="N/A"
           fi
-
-          echo "MERGED_BY=$MERGED_BY"
 
           if [ "${{ job.status }}" == "success" ]; then
             STATUS="✅ Deployment completed successfully"
@@ -224,6 +163,5 @@ jobs:
             ]
           }
           EOF
-
-          curl -X POST "$CLIQ_WEBHOOK_URL" -H "Content-Type: application/json" -d @payload.json
+          curl -s -X POST "$CLIQ_WEBHOOK_URL" -H "Content-Type: application/json" -d @payload.json
           rm payload.json
