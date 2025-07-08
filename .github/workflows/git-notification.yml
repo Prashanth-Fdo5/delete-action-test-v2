@@ -42,10 +42,6 @@ jobs:
             review)
               TITLE="New Staging Tag Release for Review site"
               ;;
-            *)
-              echo "Unknown prefix '$PREFIX', skipping notification."
-              exit 0
-              ;;
           esac
 
           cat <<EOF > payload.json
