@@ -50,13 +50,12 @@ jobs:
 
           cat <<EOF > payload.json
           {
-            "text": "🚀 $TITLE",
+            "text": "🚀 New Staging Release",
             "bot": {
               "name": "Release Bot",
               "image": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
             },
             "card": {
-              "title": "$TITLE",
               "theme": "modern-inline"
             },
             "slides": [
