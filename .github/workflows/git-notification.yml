@@ -27,7 +27,7 @@ jobs:
       - name: Notify Staging Tag Push
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
         env:
-          CLIQ_WEBHOOK_URL: https://cliq.zoho.com/company/779974041/api/v2/channelsbyname/testingchannel/message?zapikey=your_cliq_api_key
+          CLIQ_WEBHOOK_URL: https://cliq.zoho.com/company/779974041/api/v2/channelsbyname/testingchannel/message?zapikey=1001.2b828b4afe6ae4aa449846b35439e65f.cc8102b654e1beb905a79042add90969
         run: |
           TAG_NAME="${GITHUB_REF##*/}"
           PREFIX=$(echo "$TAG_NAME" | cut -d'-' -f1)
