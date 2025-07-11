@@ -87,10 +87,7 @@ jobs:
             "bot": {
               "name": "Production Deploy Bot",
               "image": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
-            },
-            "card": {
-              "title": "Production Deployment",
-              "theme": "modern-inline"
+
             },
             "slides": [
               {
@@ -118,6 +115,8 @@ jobs:
           echo "🔄 Checking status of downstream workflow..."
 
           TARGET_REPO="Prashanth-Fdo5/delete-action-test"
+          TARGET_WORKFLOW_NAME="tag-dispatch.yml"
+          TARGET_WORKFLOW_NAME="Delete-tags.yml"
           GITHUB_API="https://api.github.com"
 
           ATTEMPTS=0
