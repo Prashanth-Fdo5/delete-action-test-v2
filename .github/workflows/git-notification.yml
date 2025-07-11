@@ -47,12 +47,13 @@ jobs:
           esac
           cat <<EOF > payload.json
           {
-            "text": "🚀 New Staging Release",
+            "text": "🚀 $TITLE",
             "bot": {
               "name": "Release Bot",
               "image": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
             },
             "card": {
+              "title": "$TITLE",
               "theme": "modern-inline"
             },
             "slides": [
@@ -155,3 +156,4 @@ jobs:
           EOF
           curl -s -X POST "$CLIQ_WEBHOOK_URL" -H "Content-Type: application/json" -d @payload.json
           rm payload.json
+          
