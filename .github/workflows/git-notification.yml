@@ -116,7 +116,6 @@ jobs:
 
           TARGET_REPO="Prashanth-Fdo5/delete-action-test"
           TARGET_WORKFLOW_NAME="tag-dispatch.yml"
-          TARGET_WORKFLOW_NAME="Delete-tags.yml"
           GITHUB_API="https://api.github.com"
 
           ATTEMPTS=0
