@@ -23,15 +23,13 @@ jobs:
           echo "DEPLOYED_BY=${{ github.actor }}" >> $GITHUB_ENV
           echo "WORKFLOW_RUN_ID=${{ github.run_id }}" >> $GITHUB_ENV
           echo "DEPLOYMENT_TIME=$(date '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_ENV
-
       - name: Notify Staging Tag Push
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
         env:
-          CLIQ_WEBHOOK_URL: https://cliq.zoho.com/company/779974041/api/v2/channelsbyname/testingchannel/message?zapikey=v1001.2b828b4afe6ae4aa449846b35439e65f.cc8102b654e1beb905a79042add90969
+          CLIQ_WEBHOOK_URL: https://cliq.zoho.com/company/779974041/api/v2/channelsbyname/testingchannel/message?zapikey=1001.2b828b4afe6ae4aa449846b35439e65f.cc8102b654e1beb905a79042add90969
         run: |
           TAG_NAME="${GITHUB_REF##*/}"
           PREFIX=$(echo "$TAG_NAME" | cut -d'-' -f1)
-
           case "$PREFIX" in
             crm)
               TITLE="New Staging Tag Release for CRM"
@@ -40,22 +38,21 @@ jobs:
               TITLE="New Staging Tag Release for HRM"
               ;;
             review)
-              TITLE="New Staging Tag Release for Review Site"
+              TITLE="New Staging Tag Release for Review site"
               ;;
             *)
               echo "Unknown prefix '$PREFIX', skipping notification."
               exit 0
               ;;
           esac
-
           cat <<EOF > payload.json
           {
+            "text": "🚀 New Staging Release",
             "bot": {
               "name": "Release Bot",
               "image": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
             },
             "card": {
-              "title": "$TITLE",
               "theme": "modern-inline"
             },
             "slides": [
@@ -72,17 +69,16 @@ jobs:
             ]
           }
           EOF
-
           curl -s -X POST "$CLIQ_WEBHOOK_URL" -H "Content-Type: application/json" -d @payload.json
           rm payload.json
-
       - name: Notify Production Deployment
         if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
         env:
-          CLIQ_WEBHOOK_URL: https://cliq.zoho.com/company/779974041/api/v2/channelsbyname/testingchannel/message?zapikey=v1001.2b828b4afe6ae4aa449846b35439e65f.cc8102b654e1beb905a79042add90969
+          CLIQ_WEBHOOK_URL: https://cliq.zoho.com/company/779974041/api/v2/channelsbyname/testingchannel/message?zapikey=1001.2b828b4afe6ae4aa449846b35439e65f.cc8102b654e1beb905a79042add90969
         run: |
           cat <<EOF > payload.json
           {
+            "text": "🎉 Production Deployment Triggered!",
             "bot": {
               "name": "Production Deploy Bot",
               "image": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
@@ -94,7 +90,7 @@ jobs:
             "slides": [
               {
                 "type": "label",
-                "title": "Deployment Details",
+                "title": "Details",
                 "data": [
                   { "Environment": "🔴 Production" },
                   { "Release": "${{ github.event.release.tag_name }}" },
@@ -108,46 +104,30 @@ jobs:
             ]
           }
           EOF
-
           curl -s -X POST "$CLIQ_WEBHOOK_URL" -H "Content-Type: application/json" -d @payload.json
           rm payload.json
-
-      - name: Example Deploy Step
-        run: |
-          echo "✅ Deploying to your servers..."
-          # Replace this with your actual deployment commands.
-
-      - name: Set Final Status for Notification
-        if: always()
-        run: echo "FINAL_STATUS=${{ job.status }}" >> $GITHUB_ENV
-
       - name: Notify Final Deployment Status
         if: always()
         env:
-          CLIQ_WEBHOOK_URL: https://cliq.zoho.com/company/779974041/api/v2/channelsbyname/testingchannel/message?zapikey=v1001.2b828b4afe6ae4aa449846b35439e65f.cc8102b654e1beb905a79042add90969
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CLIQ_WEBHOOK_URL: https://cliq.zoho.com/company/779974041/api/v2/channelsbyname/testingchannel/message?zapikey=1001.2b828b4afe6ae4aa449846b35439e65f.cc8102b654e1beb905a79042add90969
         run: |
           echo "Looking up PR that merged this commit..."
           PR_INFO=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" \
             -H "Accept: application/vnd.github.groot-preview+json")
-
           if echo "$PR_INFO" | jq -e 'type == "array"' >/dev/null; then
             MERGED_BY=$(echo "$PR_INFO" | jq -r '.[0].merged_by.login // "N/A"')
           else
             MERGED_BY="N/A"
           fi
-
-          echo "MERGED_BY=$MERGED_BY"
-
-          if [ "$FINAL_STATUS" = "success" ]; then
+          if [ "${{ job.status }}" == "success" ]; then
             STATUS="✅ Deployment completed successfully"
           else
             STATUS="❌ Deployment failed"
           fi
-
           cat <<EOF > payload.json
           {
+            "text": "$STATUS",
             "bot": {
               "name": "Deployment Status Bot",
               "image": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
@@ -173,6 +153,5 @@ jobs:
             ]
           }
           EOF
-
           curl -s -X POST "$CLIQ_WEBHOOK_URL" -H "Content-Type: application/json" -d @payload.json
           rm payload.json
