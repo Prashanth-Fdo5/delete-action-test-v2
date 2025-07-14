@@ -1,0 +1,52 @@
+name: Staging Tag Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag version'
+        required: true
+
+jobs:
+  create-staging-tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  
+
+      - name: Switch to main and pull latest
+        run: |
+          git checkout main
+          git pull origin main
+
+      - name: Create and push staging tag
+        env:
+          TAG_VERSION: ${{ github.event.inputs.tag }}
+        run: |
+          echo "🔧 Creating and pushing staging tag: $TAG_VERSION"
+
+          git config user.name  "GitHub Action"
+          git config user.email "actions@github.com"
+
+          # Delete tag if it exists locally or remotely
+          if git rev-parse "$TAG_VERSION" >/dev/null 2>&1; then
+            echo "⚠️ Tag $TAG_VERSION already exists locally — removing it."
+            git tag -d "$TAG_VERSION"
+          fi
+
+          if git ls-remote --tags origin | grep -q "refs/tags/$TAG_VERSION$"; then
+            echo "⚠️ Tag $TAG_VERSION already exists on remote — deleting it."
+            git push --delete origin "$TAG_VERSION"
+          fi
+
+          # Create and push the new tag
+          git tag -a "$TAG_VERSION" -m "$TAG_VERSION"
+          git push origin "$TAG_VERSION"
+
+          echo "✅ Tag $TAG_VERSION created and pushed to origin."
+
