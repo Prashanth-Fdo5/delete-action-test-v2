@@ -1,0 +1,68 @@
+name: Staging Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag'
+        required: true
+        default: 'v*'
+        type: string
+      message:
+        description: 'Tag message' #optional message
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  staging-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  
+        token: ${{ PERSONAL_ACCESS_TOKEN_V2 }}
+    
+    - name: Configure Git
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+    
+    - name: Switch to main branch
+      run: |
+        git checkout main
+        git pull origin main
+    
+    - name: Create and push tag
+      run: |
+        TAG_VERSION="${{ github.event.inputs.version }}"
+        TAG_MESSAGE="${{ github.event.inputs.message }}"
+        
+        # Use version as message if no custom message provided
+        if [ -z "$TAG_MESSAGE" ]; then
+          TAG_MESSAGE="$TAG_VERSION"
+        fi
+        
+        # Create the tag
+        git tag "$TAG_VERSION" -m "$TAG_MESSAGE"
+        
+        # Push the tag
+        git push origin "$TAG_VERSION"
+        
+        echo "Successfully created and pushed tag: $TAG_VERSION"
+    
+    - name: Create GitHub Release (Optional)
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ PERSONAL_ACCESS_TOKEN_V2 }}
+      with:
+        tag_name: ${{ github.event.inputs.version }}
+        release_name: Release ${{ github.event.inputs.version }}
+        body: |
+          Staging release ${{ github.event.inputs.version }}
+          
+          This release was automatically created by GitHub Actions.
+        draft: false
+        prerelease: true
