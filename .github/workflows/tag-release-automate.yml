@@ -38,8 +38,8 @@ jobs:
         run: |
           echo "🔍 Prefix is: $PREFIX"
 
-          # Get the latest tag for the prefix, default to v0.01.00
-          LATEST_TAG=$(git tag --sort=-v:refname | grep "^${PREFIX}v" | head -n 1 || echo "${PREFIX}v0.01.00")
+         
+          LATEST_TAG=$(git tag --sort=-v:refname | grep "^${PREFIX}v" | head -n 1 || echo "${PREFIX}-v0.01.00")
           echo "Latest tag: $LATEST_TAG"
 
           VERSION=${LATEST_TAG#${PREFIX}v}  # remove prefix (e.g., crmv)
