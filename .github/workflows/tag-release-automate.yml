@@ -26,41 +26,32 @@ jobs:
       run: |
         git checkout main
         git pull origin main
-
     - name: Get latest tag for prefix and calculate next version
       id: version
       env:
         PREFIX: ${{ github.event.inputs.prefix }}
       run: |
         echo "🔍 Prefix is: $PREFIX"
-
         # Get latest tag with prefix (e.g., crmv0.0.01)
         LATEST_TAG=$(git tag --sort=-v:refname | grep "^${PREFIX}v" | head -n 1 || echo "${PREFIX}v0.0.00")
         echo "Latest tag: $LATEST_TAG"
-
         VERSION=${LATEST_TAG#${PREFIX}v}
         IFS='.' read -r MAJOR MINOR <<< "$VERSION"
-
         MAJOR_NUM=$((10#$MAJOR))
         MINOR_NUM=$((10#$MINOR))
-
         if [ $MINOR_NUM -ge 99 ]; then
           MAJOR_NUM=$((MAJOR_NUM + 1))
           MINOR_NUM=1
         else
           MINOR_NUM=$((MINOR_NUM + 1))
         fi
-
         NEW_MAJOR=$(printf "%d" $MAJOR_NUM)
         NEW_MINOR=$(printf "%02d" $MINOR_NUM)
-
         NEW_VERSION="${PREFIX}v${NEW_MAJOR}.${NEW_MINOR}"
         echo "New tag: $NEW_VERSION"
-
         echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
         echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
         echo "prefix=$PREFIX" >> $GITHUB_ENV
-
     - name: Create and push new tag
       run: |
         git config user.name "GitHub Action"
@@ -68,7 +59,6 @@ jobs:
         git tag "${{ steps.version.outputs.new_version }}" -m "${{ steps.version.outputs.new_version }}"
         git push origin "${{ steps.version.outputs.new_version }}"
         echo "✅ Pushed new tag: ${{ steps.version.outputs.new_version }}"
-
     - name: Create GitHub Release
       uses: actions/create-release@v1
       env:
@@ -79,7 +69,6 @@ jobs:
         body: |
           ## Changes in ${{ steps.version.outputs.new_version }}
           Auto-generated release from ${{ steps.version.outputs.latest_tag }} to ${{ steps.version.outputs.new_version }}
-
           **Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ steps.version.outputs.latest_tag }}...${{ steps.version.outputs.new_version }}
         draft: false
         prerelease: false
