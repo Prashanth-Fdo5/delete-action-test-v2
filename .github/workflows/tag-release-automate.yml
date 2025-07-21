@@ -39,10 +39,10 @@ jobs:
           echo "🔍 Prefix is: $PREFIX"
 
          
-          LATEST_TAG=$(git tag --sort=-v:refname | grep "^${PREFIX}v" | head -n 1 || echo "${PREFIX}-v0.01.00")
+          LATEST_TAG=$(git tag --sort=-v:refname | grep "^${PREFIX}-v" | head -n 1 || echo "${PREFIX}-v0.01.00")
           echo "Latest tag: $LATEST_TAG"
 
-          VERSION=${LATEST_TAG#${PREFIX}v}  # remove prefix (e.g., crmv)
+          VERSION=${LATEST_TAG#${PREFIX}-v}  # remove prefix (e.g., crmv)
           IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
 
           MAJOR_NUM=$((10#$MAJOR))
