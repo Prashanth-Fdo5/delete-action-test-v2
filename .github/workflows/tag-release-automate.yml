@@ -4,9 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       prefix:
-        description: 'Tag prefix'
+        description: 'Tag prefix (e.g., crm, hrm, review)'
         required: true
-        default: 'crm'
         type: choice
         options:
           - crm
@@ -16,7 +15,6 @@ on:
 jobs:
   create-tag:
     runs-on: ubuntu-latest
-
     permissions:
       contents: write
 
@@ -31,43 +29,44 @@ jobs:
           git checkout main
           git pull origin main
 
-      - name: Get latest tag and calculate next version
+      - name: Get next available tag for prefix
         id: version
         env:
           PREFIX: ${{ github.event.inputs.prefix }}
         run: |
           echo "🔍 Prefix is: $PREFIX"
 
-         
-          LATEST_TAG=$(git tag --sort=-v:refname | grep "^${PREFIX}-v" | head -n 1 || echo "${PREFIX}-v0.01.00")
-          echo "Latest tag: $LATEST_TAG"
+          # Get all tags with the prefix
+          TAGS=$(git tag --sort=-v:refname | grep "^${PREFIX}v")
 
-          VERSION=${LATEST_TAG#${PREFIX}-v}  # remove prefix (e.g., crmv)
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+          if [ -z "$TAGS" ]; then
+            NEW_VERSION="${PREFIX}v0.00.01"
+          else
+            LAST_TAG=$(echo "$TAGS" | head -n 1)
+            echo "Last tag: $LAST_TAG"
 
-          MAJOR_NUM=$((10#$MAJOR))
-          MINOR_NUM=$((10#$MINOR))
-          PATCH_NUM=$((10#$PATCH))
+            VERSION=${LAST_TAG#${PREFIX}v}
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
 
-          # Increment PATCH
-          PATCH_NUM=$((PATCH_NUM + 1))
+            MAJOR_NUM=$((10#$MAJOR))
+            MINOR_NUM=$((10#$MINOR))
+            PATCH_NUM=$((10#$PATCH + 1))
 
-          # Optional: if PATCH reaches 99, you could bump MINOR instead
-          # if [ $PATCH_NUM -ge 99 ]; then
-          #   PATCH_NUM=0
-          #   MINOR_NUM=$((MINOR_NUM + 1))
-          # fi
+            # Find next available patch version
+            while : ; do
+              NEW_PATCH=$(printf "%02d" $PATCH_NUM)
+              NEW_VERSION="${PREFIX}v${MAJOR_NUM}.${MINOR_NUM}.${NEW_PATCH}"
+              if git tag | grep -q "^$NEW_VERSION$"; then
+                PATCH_NUM=$((PATCH_NUM + 1))
+              else
+                break
+              fi
+            done
+          fi
 
-          # Format components with padding
-          NEW_MAJOR=$(printf "%d" $MAJOR_NUM)
-          NEW_MINOR=$(printf "%02d" $MINOR_NUM)
-          NEW_PATCH=$(printf "%02d" $PATCH_NUM)
-
-          NEW_VERSION="${PREFIX}v${NEW_MAJOR}.${NEW_MINOR}.${NEW_PATCH}"
-          echo "New tag: $NEW_VERSION"
-
+          echo "✅ New tag will be: $NEW_VERSION"
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "latest_tag=$LAST_TAG" >> $GITHUB_OUTPUT
           echo "prefix=$PREFIX" >> $GITHUB_ENV
 
       - name: Create and push new tag
@@ -87,8 +86,8 @@ jobs:
           release_name: Release ${{ steps.version.outputs.new_version }}
           body: |
             ## Changes in ${{ steps.version.outputs.new_version }}
-            Auto-generated release from ${{ steps.version.outputs.latest_tag }} to ${{ steps.version.outputs.new_version }}
-
+            Auto-generated release based on prefix `${{ env.prefix }}`.
+            
             **Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ steps.version.outputs.latest_tag }}...${{ steps.version.outputs.new_version }}
           draft: false
           prerelease: false
@@ -99,4 +98,4 @@ jobs:
           echo "- Prefix: ${{ env.prefix }}"
           echo "- Previous version: ${{ steps.version.outputs.latest_tag }}"
           echo "- New version: ${{ steps.version.outputs.new_version }}"
-          echo "- Release created: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.new_version }}"
+          echo "- Release: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.new_version }}"
