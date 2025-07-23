@@ -29,23 +29,24 @@ jobs:
           git checkout main
           git pull origin main
 
-      - name: Get next available tag for prefix
+      - name: Get next available tag for prefix (with dash)
         id: version
         env:
           PREFIX: ${{ github.event.inputs.prefix }}
         run: |
           echo "🔍 Prefix is: $PREFIX"
 
-          # Get all tags with the prefix
+          # Get tags that match pattern like crm-v0.01.01
           TAGS=$(git tag --sort=-v:refname | grep "^${PREFIX}-v")
 
           if [ -z "$TAGS" ]; then
             NEW_VERSION="${PREFIX}-v0.00.01"
+            LAST_TAG=""
           else
             LAST_TAG=$(echo "$TAGS" | head -n 1)
             echo "Last tag: $LAST_TAG"
 
-            VERSION=${LAST_TAG#${PREFIX}-v}
+            VERSION=${LAST_TAG#${PREFIX}-v}  # Remove prefix and dash (e.g., crm-)
             IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
 
             MAJOR_NUM=$((10#$MAJOR))
@@ -55,7 +56,7 @@ jobs:
             # Find next available patch version
             while : ; do
               NEW_PATCH=$(printf "%02d" $PATCH_NUM)
-              NEW_VERSION="${PREFIX}v${MAJOR_NUM}.${MINOR_NUM}.${NEW_PATCH}"
+              NEW_VERSION="${PREFIX}-v${MAJOR_NUM}.${MINOR_NUM}.${NEW_PATCH}"
               if git tag | grep -q "^$NEW_VERSION$"; then
                 PATCH_NUM=$((PATCH_NUM + 1))
               else
@@ -87,7 +88,7 @@ jobs:
           body: |
             ## Changes in ${{ steps.version.outputs.new_version }}
             Auto-generated release based on prefix `${{ env.prefix }}`.
-            
+
             **Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ steps.version.outputs.latest_tag }}...${{ steps.version.outputs.new_version }}
           draft: false
           prerelease: false
