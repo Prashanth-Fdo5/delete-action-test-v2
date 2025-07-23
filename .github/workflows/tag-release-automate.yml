@@ -37,15 +37,15 @@ jobs:
           echo "🔍 Prefix is: $PREFIX"
 
           # Get all tags with the prefix
-          TAGS=$(git tag --sort=-v:refname | grep "^${PREFIX}v")
+          TAGS=$(git tag --sort=-v:refname | grep "^${PREFIX}-v")
 
           if [ -z "$TAGS" ]; then
-            NEW_VERSION="${PREFIX}v0.00.01"
+            NEW_VERSION="${PREFIX}-v0.00.01"
           else
             LAST_TAG=$(echo "$TAGS" | head -n 1)
             echo "Last tag: $LAST_TAG"
 
-            VERSION=${LAST_TAG#${PREFIX}v}
+            VERSION=${LAST_TAG#${PREFIX}-v}
             IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
 
             MAJOR_NUM=$((10#$MAJOR))
