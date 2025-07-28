@@ -1,4 +1,4 @@
-name: Notify Cliq on new issue
+name: Notify Zoho Cliq on Issue Creation
 
 on:
   issues:
@@ -9,44 +9,38 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Send notification to Zoho Cliq after issue creation
-        uses: actions/github-script@v7
+      - name: Send issue details to Zoho Cliq
         env:
           CLIQ_WEBHOOK_URL: https://cliq.zoho.com/company/779974041/api/v2/channelsbyname/testingchannel/message?zapikey=1001.2b828b4afe6ae4aa449846b35439e65f.cc8102b654e1beb905a79042add90969
-        with:
-          script: |
-            const fetch = require('node-fetch');
+        run: |
+          echo "Extracting GitHub issue data..."
 
-            const issue = context.payload.issue;
+          ISSUE_TITLE="${{ github.event.issue.title }}"
+          ISSUE_CREATOR="${{ github.event.issue.user.login }}"
+          ISSUE_URL="${{ github.event.issue.html_url }}"
 
-            const title = issue.title;
-            const creator = issue.user?.login ?? 'unknown';
-            const assignees = (issue.assignees && issue.assignees.length)
-              ? issue.assignees.map(a => a.login).join(', ')
-              : 'None';
+          # Extract assignees
+          ISSUE_ASSIGNEES=$(echo '${{ toJson(github.event.issue.assignees) }}' | jq -r '.[]?.login' | paste -sd "," -)
+          if [ -z "$ISSUE_ASSIGNEES" ]; then
+            ISSUE_ASSIGNEES="None"
+          fi
 
-            // Treat any label(s) as "issue type". Adjust this logic if you use a specific naming scheme.
-            const issueType = (issue.labels && issue.labels.length)
-              ? issue.labels.map(l => typeof l === 'string' ? l : l.name).join(', ')
-              : 'None';
+          # Extract labels (as issue type)
+          ISSUE_LABELS=$(echo '${{ toJson(github.event.issue.labels) }}' | jq -r '.[]?.name' | paste -sd "," -)
+          if [ -z "$ISSUE_LABELS" ]; then
+            ISSUE_LABELS="None"
+          fi
 
-            // Simple text payload (works with Cliq incoming webhooks)
-            const payload = {
-              text: `*New GitHub Issue Created*\n` +
-                    `**Title:** ${title}\n` +
-                    `**Creator:** ${creator}\n` +
-                    `**Assignees:** ${assignees}\n` +
-                    `**Type:** ${issueType}\n` +
-                    `**Link:** ${issue.html_url}`
-            };
+          # Format message for Cliq (basic text format)
+          MESSAGE="*New GitHub Issue Created*\n"\
 
-            const res = await fetch(process.env.CLIQ_WEBHOOK_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload),
-            });
+          "**Title:** ${ISSUE_TITLE}\n"\
+          "**Creator:** ${ISSUE_CREATOR}\n"\
+          "**Assignees:** ${ISSUE_ASSIGNEES}\n"\
+          "**Type:** ${ISSUE_LABELS}\n"\
+          "**Link:** ${ISSUE_URL}"
 
-            if (!res.ok) {
-              const body = await res.text();
-              core.setFailed(`Failed to send to Cliq: ${res.status} ${body}`);
-            }
+          echo "Sending to Cliq..."
+          curl -X POST "$CLIQ_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "{\"text\": \"$MESSAGE\"}"
