@@ -1,0 +1,52 @@
+name: Notify Cliq on new issue
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  notify-cliq:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send notification to Zoho Cliq after issue creation
+        uses: actions/github-script@v7
+        env:
+          CLIQ_WEBHOOK_URL: https://cliq.zoho.com/company/779974041/api/v2/channelsbyname/testingchannel/message?zapikey=1001.2b828b4afe6ae4aa449846b35439e65f.cc8102b654e1beb905a79042add90969
+        with:
+          script: |
+            const fetch = require('node-fetch');
+
+            const issue = context.payload.issue;
+
+            const title = issue.title;
+            const creator = issue.user?.login ?? 'unknown';
+            const assignees = (issue.assignees && issue.assignees.length)
+              ? issue.assignees.map(a => a.login).join(', ')
+              : 'None';
+
+            // Treat any label(s) as "issue type". Adjust this logic if you use a specific naming scheme.
+            const issueType = (issue.labels && issue.labels.length)
+              ? issue.labels.map(l => typeof l === 'string' ? l : l.name).join(', ')
+              : 'None';
+
+            // Simple text payload (works with Cliq incoming webhooks)
+            const payload = {
+              text: `*New GitHub Issue Created*\n` +
+                    `**Title:** ${title}\n` +
+                    `**Creator:** ${creator}\n` +
+                    `**Assignees:** ${assignees}\n` +
+                    `**Type:** ${issueType}\n` +
+                    `**Link:** ${issue.html_url}`
+            };
+
+            const res = await fetch(process.env.CLIQ_WEBHOOK_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            });
+
+            if (!res.ok) {
+              const body = await res.text();
+              core.setFailed(`Failed to send to Cliq: ${res.status} ${body}`);
+            }
