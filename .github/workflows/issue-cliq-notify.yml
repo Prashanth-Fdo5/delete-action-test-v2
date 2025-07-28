@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Send issue details to Zoho Cliq
+      - name: Send issue as card to Zoho Cliq
         env:
           CLIQ_WEBHOOK_URL: https://cliq.zoho.com/company/779974041/api/v2/channelsbyname/testingchannel/message?zapikey=1001.2b828b4afe6ae4aa449846b35439e65f.cc8102b654e1beb905a79042add90969
         run: |
@@ -27,14 +27,39 @@ jobs:
           ISSUE_LABELS=$(echo '${{ toJson(github.event.issue.labels) }}' | jq -r '.[].name' | paste -sd "," -)
           [ -z "$ISSUE_LABELS" ] && ISSUE_LABELS="None"
 
-          # Build JSON safely using jq (no broken quotes!)
+          echo "Building JSON payload for Cliq..."
+
           PAYLOAD=$(jq -n \
-            --arg text "*New GitHub Issue Created*\n**Title:** $ISSUE_TITLE\n**Creator:** $ISSUE_CREATOR\n**Assignees:** $ISSUE_ASSIGNEES\n**Type:** $ISSUE_LABELS\n**Link:** $ISSUE_URL" \
-            '{text: $text}')
+            --arg title "$ISSUE_TITLE" \
+            --arg creator "$ISSUE_CREATOR" \
+            --arg assignees "$ISSUE_ASSIGNEES" \
+            --arg labels "$ISSUE_LABELS" \
+            --arg url "$ISSUE_URL" \
+            '{
+              text: "*New GitHub Issue Created*",
+              bot: {
+                name: "GitHub Notifier",
+                image: "https://www.zoho.com/sites/zweb/images/cliq/restapi/zoho-cliq-bot-icon.png"
+              },
+              card: {
+                theme: "modern-inline"
+              },
+              slides: [
+                {
+                  type: "list",
+                  title: "GitHub Issue Details",
+                  data: [
+                    "📝 Title: \($title)",
+                    "👤 Creator: \($creator)",
+                    "👥 Assignees: \($assignees)",
+                    "🏷️ Type: \($labels)",
+                    "🔗 [View Issue](\($url))"
+                  ]
+                }
+              ]
+            }')
 
-          echo "Sending payload:"
-          echo "$PAYLOAD"
-
+          echo "Sending payload to Cliq..."
           curl -X POST "$CLIQ_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD"
