@@ -19,26 +19,22 @@ jobs:
           ISSUE_CREATOR="${{ github.event.issue.user.login }}"
           ISSUE_URL="${{ github.event.issue.html_url }}"
 
-          # Get assignees as comma-separated list
+          # Get assignees as comma-separated string
           ISSUE_ASSIGNEES=$(echo '${{ toJson(github.event.issue.assignees) }}' | jq -r '.[].login' | paste -sd "," -)
-          if [ -z "$ISSUE_ASSIGNEES" ]; then
-            ISSUE_ASSIGNEES="None"
-          fi
+          [ -z "$ISSUE_ASSIGNEES" ] && ISSUE_ASSIGNEES="None"
 
-          # Get labels as comma-separated list
+          # Get labels as comma-separated string
           ISSUE_LABELS=$(echo '${{ toJson(github.event.issue.labels) }}' | jq -r '.[].name' | paste -sd "," -)
-          if [ -z "$ISSUE_LABELS" ]; then
-            ISSUE_LABELS="None"
-          fi
+          [ -z "$ISSUE_LABELS" ] && ISSUE_LABELS="None"
 
-          # Format JSON message using printf
-          PAYLOAD=$(printf '{"text": "*New GitHub Issue Created*\n**Title:** %s\n**Creator:** %s\n**Assignees:** %s\n**Type:** %s\n**Link:** %s"}' \
-            "$ISSUE_TITLE" "$ISSUE_CREATOR" "$ISSUE_ASSIGNEES" "$ISSUE_LABELS" "$ISSUE_URL")
+          # Build JSON safely using jq (no broken quotes!)
+          PAYLOAD=$(jq -n \
+            --arg text "*New GitHub Issue Created*\n**Title:** $ISSUE_TITLE\n**Creator:** $ISSUE_CREATOR\n**Assignees:** $ISSUE_ASSIGNEES\n**Type:** $ISSUE_LABELS\n**Link:** $ISSUE_URL" \
+            '{text: $text}')
 
-          echo "Sending message to Zoho Cliq..."
+          echo "Sending payload:"
+          echo "$PAYLOAD"
+
           curl -X POST "$CLIQ_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD"
-
-
-                      
