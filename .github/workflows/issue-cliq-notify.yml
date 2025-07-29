@@ -1,5 +1,4 @@
 name: Notify Zoho Cliq on Issue Creation
-
 on:
   issues:
     types: [opened]
@@ -7,59 +6,76 @@ on:
 jobs:
   notify-cliq:
     runs-on: ubuntu-latest
-
     steps:
       - name: Send issue as card to Zoho Cliq
         env:
           CLIQ_WEBHOOK_URL: https://cliq.zoho.com/company/779974041/api/v2/channelsbyname/testingchannel/message?zapikey=1001.2b828b4afe6ae4aa449846b35439e65f.cc8102b654e1beb905a79042add90969
         run: |
           echo "Collecting issue details..."
-
           ISSUE_TITLE="${{ github.event.issue.title }}"
           ISSUE_CREATOR="${{ github.event.issue.user.login }}"
           ISSUE_URL="${{ github.event.issue.html_url }}"
-
-          # Get assignees as comma-separated string
-          ISSUE_ASSIGNEES=$(echo '${{ toJson(github.event.issue.assignees) }}' | jq -r '.[].login' | paste -sd "," -)
+          
+          # Get assignees
+          ISSUE_ASSIGNEES=$(echo '${{ toJson(github.event.issue.assignees) }}' | jq -r '.[].login' | tr '\n' ',' | sed 's/,$//')
           [ -z "$ISSUE_ASSIGNEES" ] && ISSUE_ASSIGNEES="None"
-
-          # Get labels as comma-separated string
-          ISSUE_LABELS=$(echo '${{ toJson(github.event.issue.labels) }}' | jq -r '.[].name' | paste -sd "," -)
+          
+          # Get labels
+          ISSUE_LABELS=$(echo '${{ toJson(github.event.issue.labels) }}' | jq -r '.[].name' | tr '\n' ',' | sed 's/,$//')
           [ -z "$ISSUE_LABELS" ] && ISSUE_LABELS="None"
+          
+          # Escape special characters for JSON
+          ISSUE_TITLE_ESCAPED=$(echo "$ISSUE_TITLE" | sed 's/"/\\"/g' | sed "s/'/\\'/g")
+          ISSUE_CREATOR_ESCAPED=$(echo "$ISSUE_CREATOR" | sed 's/"/\\"/g')
+          ISSUE_ASSIGNEES_ESCAPED=$(echo "$ISSUE_ASSIGNEES" | sed 's/"/\\"/g')
+          ISSUE_LABELS_ESCAPED=$(echo "$ISSUE_LABELS" | sed 's/"/\\"/g')
+          ISSUE_URL_ESCAPED=$(echo "$ISSUE_URL" | sed 's/"/\\"/g')
+          
+          echo "Building payload..."
+          cat > payload.json <<EOF
+{
+ "text": "*New GitHub Issue Created*",
+  "bot": {
+    "name": "GitHub Notifier",
+    "image": "https://www.zoho.com/sites/zweb/images/cliq/restapi/zoho-cliq-bot-icon.png"
+  },
+  "card": {
+    "theme": "modern-inline"
+  },
+  "slides": [
+    {
+      "type": "list",
+      "title": "GitHub Issue Details",
+      "data": [
+        "📝 Title: ${ISSUE_TITLE_ESCAPED}",
+        "👤 Creator: ${ISSUE_CREATOR_ESCAPED}",
+        "👥 Assignees: ${ISSUE_ASSIGNEES_ESCAPED}",
+        "🏷️ Labels: ${ISSUE_LABELS_ESCAPED}",
+        "🔗 View Issue: ${ISSUE_URL_ESCAPED}"
+      ]
+     }
+    ] 
+}
+    EOF
 
-          echo "Building JSON payload for Cliq..."
-
-          PAYLOAD=$(jq -n \
-            --arg title "$ISSUE_TITLE" \
-            --arg creator "$ISSUE_CREATOR" \
-            --arg assignees "$ISSUE_ASSIGNEES" \
-            --arg labels "$ISSUE_LABELS" \
-            --arg url "$ISSUE_URL" \
-            '{
-              text: "*New GitHub Issue Created*",
-              bot: {
-                name: "GitHub Notifier",
-                image: "https://www.zoho.com/sites/zweb/images/cliq/restapi/zoho-cliq-bot-icon.png"
-              },
-              card: {
-                theme: "modern-inline"
-              },
-              slides: [
-                {
-                  type: "list",
-                  title: "GitHub Issue Details",
-                  data: [
-                    "📝 Title: \($title)",
-                    "👤 Creator: \($creator)",
-                    "👥 Assignees: \($assignees)",
-                    "🏷️ Type: \($labels)",
-                    "🔗 [View Issue](\($url))"
-                  ]
-                }
-              ]
-            }')
-
-          echo "Sending payload to Cliq..."
-          curl -X POST "$CLIQ_WEBHOOK_URL" \
+          echo "Payload content:"
+          cat payload.json
+          
+          echo "Sending to Zoho Cliq..."
+          RESPONSE=$(curl -s -w "HTTP_STATUS:%{http_code}" -X POST "$CLIQ_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
-            -d "$PAYLOAD"
+            -d @payload.json)
+          
+          HTTP_STATUS=$(echo $RESPONSE | grep -o "HTTP_STATUS:[0-9]*" | cut -d: -f2)
+          RESPONSE_BODY=$(echo $RESPONSE | sed 's/HTTP_STATUS:[0-9]*$//')
+          
+          echo "HTTP Status: $HTTP_STATUS"
+          echo "Response: $RESPONSE_BODY"
+          
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+            echo "✅ Successfully sent notification to Zoho Cliq"
+          else
+            echo "❌ Failed to send notification. HTTP Status: $HTTP_STATUS"
+            echo "Response: $RESPONSE_BODY"
+            exit 1
+          fi
