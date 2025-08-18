@@ -31,7 +31,12 @@ jobs:
         run: |
           git checkout main
           git pull origin main
-
+      
+      - name: Configure Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
       - name: Get next available tag for prefix (with dash)
         id: version
         env:
