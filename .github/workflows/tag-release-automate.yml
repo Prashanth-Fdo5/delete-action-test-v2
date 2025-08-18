@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v1
         with:
           fetch-depth: 0
 
@@ -31,12 +31,7 @@ jobs:
         run: |
           git checkout main
           git pull origin main
-      
-      - name: Configure Git identity
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          
+
       - name: Get next available tag for prefix (with dash)
         id: version
         env:
@@ -76,7 +71,13 @@ jobs:
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "latest_tag=$LAST_TAG" >> $GITHUB_OUTPUT
           echo "prefix=$PREFIX" >> $GITHUB_ENV
-
+        
+      - name: Configure Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          
       - name: Create and push new tag
         run: |
           git tag "${{ steps.version.outputs.new_version }}" -m "${{ steps.version.outputs.new_version }}"
